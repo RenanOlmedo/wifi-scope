@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual env
+venv/
+.venv/
+
+# Dados gerados
+data/raw/
+data/processed/
+data/reports/
+
+# Relatórios
+*.docx
+
+# CSVs
+*.csv
+
+# Streamlit cache
+.streamlit/
+
+# VS Code
+.vscode/
+
+# Sistema
+.DS_Store
+Thumbs.db
