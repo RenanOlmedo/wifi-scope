@@ -11,7 +11,10 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from reporting.report_generator import generate_report
 from processing.feature_engineering import create_features
 
-IS_CLOUD = st.secrets.get("STREAMLIT_CLOUD", "0") == "1"
+try:
+    IS_CLOUD = st.secrets.get("STREAMLIT_CLOUD", "0") == "1"
+except Exception:
+    IS_CLOUD = False
 
 # =========================
 # CONFIGURAÇÃO
