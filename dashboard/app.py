@@ -11,6 +11,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from reporting.report_generator import generate_report
 from processing.feature_engineering import create_features
 
+IS_CLOUD = st.secrets.get("STREAMLIT_CLOUD", "0") == "1"
 
 # =========================
 # CONFIGURAÇÃO
@@ -98,106 +99,148 @@ st.divider()
 # PAINEL DE CONTROLE
 # =========================
 
+# =========================
+# PAINEL DE CONTROLE
+# =========================
+
 st.subheader("🎛️ Central de Controle")
 
-col_btn1, col_btn2, col_btn3, col_btn4 = st.columns(4)
+if IS_CLOUD:
 
-with col_btn1:
+    col_btn1, col_btn2, col_btn3 = st.columns(3)
 
-    if st.button("🔄 Atualizar Tudo", use_container_width=True):
+    with col_btn1:
 
-        with st.spinner("Executando pipeline completo..."):
+        if st.button("🔄 Atualizar Tudo", use_container_width=True):
 
-            result = run_full_pipeline()
+            with st.spinner("Executando pipeline completo..."):
 
-            if result.returncode == 0:
-                st.success("Pipeline executado com sucesso!")
-                st.cache_data.clear()
-                st.rerun()
+                result = run_full_pipeline()
+
+                if result.returncode == 0:
+                    st.success("Pipeline executado com sucesso!")
+                    st.cache_data.clear()
+                    st.rerun()
+                else:
+                    st.error("Erro ao executar pipeline.")
+                    st.text(result.stderr)
+
+    with col_btn2:
+
+        if st.button("🧹 Limpar Cache", use_container_width=True):
+
+            st.cache_data.clear()
+            st.success("Cache limpo.")
+            st.rerun()
+
+    with col_btn3:
+
+        if st.button("🔁 Recarregar Tela", use_container_width=True):
+
+            st.cache_data.clear()
+            st.rerun()
+
+else:
+
+    col_btn1, col_btn2, col_btn3, col_btn4 = st.columns(4)
+
+    with col_btn1:
+
+        if st.button("🔄 Atualizar Tudo", use_container_width=True):
+
+            with st.spinner("Executando pipeline completo..."):
+
+                result = run_full_pipeline()
+
+                if result.returncode == 0:
+                    st.success("Pipeline executado com sucesso!")
+                    st.cache_data.clear()
+                    st.rerun()
+                else:
+                    st.error("Erro ao executar pipeline.")
+                    st.text(result.stderr)
+
+    with col_btn2:
+
+        if st.button("📄 Gerar Relatório DOCX", use_container_width=True):
+
+            if (
+                DATA_PATH.exists()
+                and NETWORK_SUMMARY_PATH.exists()
+                and CHANNEL_SUMMARY_PATH.exists()
+                and BSSID_SUMMARY_PATH.exists()
+                and ANOMALIES_PATH.exists()
+            ):
+
+                with st.spinner("Gerando relatório DOCX..."):
+
+                    df_report = pd.read_csv(DATA_PATH)
+                    network_summary_report = pd.read_csv(NETWORK_SUMMARY_PATH)
+                    channel_summary_report = pd.read_csv(CHANNEL_SUMMARY_PATH)
+                    bssid_summary_report = pd.read_csv(BSSID_SUMMARY_PATH)
+                    anomalies_report = pd.read_csv(ANOMALIES_PATH)
+
+                    df_report["timestamp"] = pd.to_datetime(
+                        df_report["timestamp"]
+                    )
+
+                    df_report = create_features(df_report)
+
+                    output_path = generate_report(
+                        df_report,
+                        network_summary_report,
+                        channel_summary_report,
+                        bssid_summary_report,
+                        anomalies_report
+                    )
+
+                    st.success("Relatório gerado com sucesso!")
+                    st.write(output_path)
+
             else:
-                st.error("Erro ao executar pipeline.")
-                st.text(result.stderr)
+                st.warning("Rode o pipeline pelo menos uma vez antes de gerar relatório.")
 
-with col_btn2:
+    with col_btn3:
 
-    if st.button("📄 Gerar Relatório DOCX", use_container_width=True):
+        if st.button("📂 Abrir Relatórios", use_container_width=True):
 
-        if (
-            DATA_PATH.exists()
-            and NETWORK_SUMMARY_PATH.exists()
-            and CHANNEL_SUMMARY_PATH.exists()
-            and BSSID_SUMMARY_PATH.exists()
-            and ANOMALIES_PATH.exists()
-        ):
+            open_folder(REPORTS_PATH)
 
-            with st.spinner("Gerando relatório DOCX..."):
+    with col_btn4:
 
-                df_report = pd.read_csv(DATA_PATH)
-                network_summary_report = pd.read_csv(NETWORK_SUMMARY_PATH)
-                channel_summary_report = pd.read_csv(CHANNEL_SUMMARY_PATH)
-                bssid_summary_report = pd.read_csv(BSSID_SUMMARY_PATH)
-                anomalies_report = pd.read_csv(ANOMALIES_PATH)
+        if st.button("🗂️ Abrir Projeto", use_container_width=True):
 
-                df_report["timestamp"] = pd.to_datetime(
-                    df_report["timestamp"]
-                )
-                df_report = create_features(df_report)
-
-                output_path = generate_report(
-                    df_report,
-                    network_summary_report,
-                    channel_summary_report,
-                    bssid_summary_report,
-                    anomalies_report
-                )
-
-                st.success("Relatório gerado com sucesso!")
-                st.write(output_path)
-
-        else:
-            st.warning("Rode o pipeline pelo menos uma vez antes de gerar relatório.")
-
-with col_btn3:
-
-    if st.button("📂 Abrir Relatórios", use_container_width=True):
-
-        open_folder(REPORTS_PATH)
-
-with col_btn4:
-
-    if st.button("🗂️ Abrir Projeto", use_container_width=True):
-
-        open_folder(BASE_PATH)
+            open_folder(BASE_PATH)
 
 
-col_btn5, col_btn6, col_btn7, col_btn8 = st.columns(4)
+    col_btn5, col_btn6, col_btn7, col_btn8 = st.columns(4)
 
-with col_btn5:
+    with col_btn5:
 
-    if st.button("🧹 Limpar Cache", use_container_width=True):
+        if st.button("🧹 Limpar Cache", use_container_width=True):
 
-        st.cache_data.clear()
-        st.success("Cache limpo.")
-        st.rerun()
+            st.cache_data.clear()
+            st.success("Cache limpo.")
+            st.rerun()
 
-with col_btn6:
+    with col_btn6:
 
-    if st.button("📊 Abrir Dados Processados", use_container_width=True):
+        if st.button("📊 Abrir Dados Processados", use_container_width=True):
 
-        open_folder("data/processed")
+            open_folder("data/processed")
 
-with col_btn7:
+    with col_btn7:
 
-    if st.button("🖼️ Abrir Gráficos", use_container_width=True):
+        if st.button("🖼️ Abrir Gráficos", use_container_width=True):
 
-        open_folder("data/reports")
+            open_folder("data/reports")
 
-with col_btn8:
+    with col_btn8:
 
-    if st.button("🔁 Recarregar Tela", use_container_width=True):
+        if st.button("🔁 Recarregar Tela", use_container_width=True):
 
-        st.cache_data.clear()
-        st.rerun()
+            st.cache_data.clear()
+            st.rerun()
 
 
 st.divider()
