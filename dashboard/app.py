@@ -4,6 +4,10 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from reporting.report_generator import generate_report
 from processing.feature_engineering import create_features
