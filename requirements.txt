@@ -1,8 +1,9 @@
+streamlit
 pandas
 numpy
 matplotlib
-seaborn
 requests
 python-docx
 scipy
 openpyxl
+plotly
