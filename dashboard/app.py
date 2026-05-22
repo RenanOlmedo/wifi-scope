@@ -1,10 +1,9 @@
 import os
+import sys
 import subprocess
 from pathlib import Path
-
 import pandas as pd
 import streamlit as st
-import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
@@ -61,7 +60,7 @@ def load_data():
 def run_full_pipeline():
 
     result = subprocess.run(
-        ["python", "main.py"],
+        [sys.executable, "main.py"],
         capture_output=True,
         text=True
     )
