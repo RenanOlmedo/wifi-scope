@@ -56,7 +56,8 @@ generate_all_plots(
     network_summary,
     channel_summary,
     bssid_summary,
-    anomalies_df
+    anomalies_df,
+    rf_peak_hours
 )
 
 # generate_report(

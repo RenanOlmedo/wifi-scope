@@ -392,13 +392,50 @@ def plot_quality_distribution(df):
     print("Gráfico salvo:")
     print(output_path)
 
+def plot_rf_peak_hours(rf_peak_hours):
+
+    print("Gerando gráfico: pico RF por horário...")
+
+    ensure_reports_folder()
+
+    hourly = (
+        rf_peak_hours
+        .sort_values("hour")
+    )
+
+    plt.figure(figsize=(12, 6))
+
+    plt.bar(
+        hourly["hour"],
+        hourly["rf_load_score"]
+    )
+
+    plt.title("Carga RF por Horário do Dia")
+    plt.xlabel("Hora do dia")
+    plt.ylabel("RF Load Score")
+
+    plt.xticks(
+        range(0, 24)
+    )
+
+    plt.tight_layout()
+
+    output_path = REPORTS_PATH / "rf_peak_hours.png"
+
+    plt.savefig(output_path)
+    plt.close()
+
+    print("Gráfico salvo:")
+    print(output_path)
+
 
 def generate_all_plots(
     df,
     network_summary,
     channel_summary,
     bssid_summary,
-    anomalies_df
+    anomalies_df,
+    rf_peak_hours
 ):
 
     plot_top_networks(network_summary)
@@ -413,3 +450,4 @@ def generate_all_plots(
     plot_bssid_stability(bssid_summary)
     plot_anomaly_types(anomalies_df)
     plot_quality_distribution(df)
+    plot_rf_peak_hours(rf_peak_hours)

@@ -570,6 +570,11 @@ with tab2:
         "RSSI médio por canal"
     )
 
+    show_image(
+        Path("data/reports/rf_peak_hours.png"),
+        "Carga RF por horário do dia"
+    )
+
 with tab3:
 
     show_image(
