@@ -4,7 +4,6 @@ import subprocess
 from pathlib import Path
 import pandas as pd
 import streamlit as st
-from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
@@ -32,6 +31,11 @@ NETWORK_SUMMARY_PATH = Path("data/processed/network_summary.csv")
 CHANNEL_SUMMARY_PATH = Path("data/processed/channel_summary.csv")
 BSSID_SUMMARY_PATH = Path("data/processed/bssid_summary.csv")
 ANOMALIES_PATH = Path("data/processed/wireless_anomalies.csv")
+
+RF_HEALTH_PATH = Path("data/processed/rf_health_score.csv")
+CHANNEL_RECOMMENDATION_PATH = Path("data/processed/channel_recommendation.csv")
+RF_PEAK_HOURS_PATH = Path("data/processed/rf_peak_hours.csv")
+
 REPORTS_PATH = Path(
     "C:/Users/rferr/OneDrive/Documentos/wifi scope docs"
 )
@@ -50,6 +54,10 @@ def load_data():
     bssid_summary = pd.read_csv(BSSID_SUMMARY_PATH)
     anomalies_df = pd.read_csv(ANOMALIES_PATH)
 
+    rf_health = pd.read_csv(RF_HEALTH_PATH)
+    channel_recommendation = pd.read_csv(CHANNEL_RECOMMENDATION_PATH)
+    rf_peak_hours = pd.read_csv(RF_PEAK_HOURS_PATH)
+
     df["timestamp"] = pd.to_datetime(df["timestamp"])
 
     return (
@@ -57,7 +65,10 @@ def load_data():
         network_summary,
         channel_summary,
         bssid_summary,
-        anomalies_df
+        anomalies_df,
+        rf_health,
+        channel_recommendation,
+        rf_peak_hours
     )
 
 
@@ -97,10 +108,6 @@ st.caption("Wireless Intelligence Platform | ESP8266 + Google Sheets + Python An
 
 st.divider()
 
-
-# =========================
-# PAINEL DE CONTROLE
-# =========================
 
 # =========================
 # PAINEL DE CONTROLE
@@ -262,7 +269,16 @@ if not DATA_PATH.exists():
     st.stop()
 
 
-df, network_summary, channel_summary, bssid_summary, anomalies_df = load_data()
+(
+    df,
+    network_summary,
+    channel_summary,
+    bssid_summary,
+    anomalies_df,
+    rf_health,
+    channel_recommendation,
+    rf_peak_hours
+) = load_data()
 
 
 # =========================
@@ -287,6 +303,48 @@ col3.metric("BSSIDs únicos", unique_bssids)
 col4.metric("RSSI médio", f"{avg_rssi} dBm")
 col5.metric("Melhor RSSI", f"{best_rssi} dBm")
 col6.metric("Anomalias", anomaly_count)
+
+st.divider()
+
+
+# =========================
+# INTELIGÊNCIA RF
+# =========================
+
+st.subheader("🧠 Inteligência RF")
+
+rf_score = rf_health.iloc[0]["rf_health_score"]
+rf_status = rf_health.iloc[0]["status"]
+
+best_channel = int(
+    channel_recommendation
+    .sort_values("interference_score")
+    .iloc[0]["channel"]
+)
+
+peak_hour = int(
+    rf_peak_hours
+    .sort_values("rf_load_score", ascending=False)
+    .iloc[0]["hour"]
+)
+
+col_rf1, col_rf2, col_rf3 = st.columns(3)
+
+col_rf1.metric(
+    "RF Environment Score",
+    f"{rf_score}/100",
+    rf_status
+)
+
+col_rf2.metric(
+    "Canal recomendado",
+    best_channel
+)
+
+col_rf3.metric(
+    "Horário de pico RF",
+    f"{peak_hour}:00"
+)
 
 st.divider()
 

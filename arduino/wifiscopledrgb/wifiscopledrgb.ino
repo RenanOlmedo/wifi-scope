@@ -40,6 +40,17 @@ Adafruit_SSD1306 display(
 #define BUTTON_PIN D5
 
 // ======================
+// LED RGB
+// ======================
+
+#define RGB_R_PIN D6
+#define RGB_G_PIN D7
+#define RGB_B_PIN D0
+
+// Se as cores ficarem invertidas, troque para true
+bool COMMON_ANODE = false;
+
+// ======================
 // DADOS DO ULTIMO SCAN
 // ======================
 
@@ -54,7 +65,61 @@ String lastStatus = "Aguardando";
 unsigned long lastButtonPress = 0;
 
 // ======================
-// FUNCOES
+// FUNCOES LED RGB
+// ======================
+
+void rgbWrite(bool r, bool g, bool b) {
+
+  if (COMMON_ANODE) {
+    r = !r;
+    g = !g;
+    b = !b;
+  }
+
+  digitalWrite(RGB_R_PIN, r ? HIGH : LOW);
+  digitalWrite(RGB_G_PIN, g ? HIGH : LOW);
+  digitalWrite(RGB_B_PIN, b ? HIGH : LOW);
+}
+
+void rgbOff() {
+  rgbWrite(false, false, false);
+}
+
+void rgbBlue() {
+  rgbWrite(false, false, true);
+}
+
+void rgbGreen() {
+  rgbWrite(false, true, false);
+}
+
+void rgbYellow() {
+  rgbWrite(true, true, false);
+}
+
+void rgbPurple() {
+  rgbWrite(true, false, true);
+}
+
+void rgbRed() {
+  rgbWrite(true, false, false);
+}
+
+void rgbWhite() {
+  rgbWrite(true, true, true);
+}
+
+void blinkBlue() {
+
+  rgbBlue();
+  delay(250);
+
+  rgbOff();
+  delay(250);
+}
+
+// ======================
+// FUNCOES GERAIS
 // ======================
 
 String getEncryptionType(int type) {
@@ -66,7 +131,49 @@ String getEncryptionType(int type) {
   return "SECURED";
 }
 
+String urlEncode(String str) {
+
+  String encoded = "";
+  char c;
+  char code0;
+  char code1;
+
+  for (int i = 0; i < str.length(); i++) {
+
+    c = str.charAt(i);
+
+    if (isalnum(c)) {
+
+      encoded += c;
+
+    } else {
+
+      code1 = (c & 0xf) + '0';
+
+      if ((c & 0xf) > 9) {
+        code1 = (c & 0xf) - 10 + 'A';
+      }
+
+      c = (c >> 4) & 0xf;
+
+      code0 = c + '0';
+
+      if (c > 9) {
+        code0 = c - 10 + 'A';
+      }
+
+      encoded += '%';
+      encoded += code0;
+      encoded += code1;
+    }
+  }
+
+  return encoded;
+}
+
 void showOLED() {
+
+  rgbWhite();
 
   display.ssd1306_command(SSD1306_DISPLAYON);
 
@@ -106,6 +213,14 @@ void showOLED() {
   display.display();
 
   display.ssd1306_command(SSD1306_DISPLAYOFF);
+
+  if (lastStatus == "Enviado" || lastStatus == "WiFi OK") {
+    rgbGreen();
+  } else if (lastStatus == "Erro HTTP" || lastStatus == "Erro HTTPS") {
+    rgbRed();
+  } else {
+    rgbGreen();
+  }
 }
 
 void checkButton() {
@@ -127,11 +242,19 @@ void setup() {
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
+  pinMode(RGB_R_PIN, OUTPUT);
+  pinMode(RGB_G_PIN, OUTPUT);
+  pinMode(RGB_B_PIN, OUTPUT);
+
+  rgbBlue();
+
   Wire.begin(D2, D1);
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
 
     Serial.println("Falha ao iniciar OLED");
+
+    rgbRed();
 
     while (true);
   }
@@ -149,7 +272,8 @@ void setup() {
 
   while (WiFi.status() != WL_CONNECTED) {
 
-    delay(500);
+    blinkBlue();
+
     Serial.print(".");
   }
 
@@ -159,6 +283,8 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   lastStatus = "WiFi OK";
+
+  rgbGreen();
 }
 
 void loop() {
@@ -169,6 +295,8 @@ void loop() {
   Serial.println("================================");
   Serial.println("NOVO SCAN WIFI");
   Serial.println("================================");
+
+  rgbYellow();
 
   int n = WiFi.scanNetworks();
 
@@ -225,11 +353,11 @@ void loop() {
 
     String url =
       scriptURL
-      + "?ssid=" + ssidFound
-      + "&bssid=" + bssid
+      + "?ssid=" + urlEncode(ssidFound)
+      + "&bssid=" + urlEncode(bssid)
       + "&rssi=" + String(rssi)
       + "&channel=" + String(channel)
-      + "&encryption=" + encryption;
+      + "&encryption=" + urlEncode(encryption);
 
     std::unique_ptr<BearSSL::WiFiClientSecure> client(
       new BearSSL::WiFiClientSecure
@@ -241,6 +369,8 @@ void loop() {
 
     Serial.println("Enviando para Google Sheets...");
 
+    rgbPurple();
+
     if (https.begin(*client, url)) {
 
       int httpCode = https.GET();
@@ -249,9 +379,16 @@ void loop() {
       Serial.println(httpCode);
 
       if (httpCode == 200 || httpCode == 302) {
+
         lastStatus = "Enviado";
+
+        rgbGreen();
+
       } else {
+
         lastStatus = "Erro HTTP";
+
+        rgbRed();
       }
 
       https.end();
@@ -261,11 +398,17 @@ void loop() {
       Serial.println("Falha HTTPS");
 
       lastStatus = "Erro HTTPS";
+
+      rgbRed();
     }
 
     checkButton();
 
     delay(1500);
+
+    if (lastStatus == "Enviado") {
+      rgbPurple();
+    }
   }
 
   if (n > 0) {
@@ -308,6 +451,12 @@ void loop() {
 
   Serial.println();
   Serial.println("Aguardando 5 minutos...");
+
+  if (lastStatus == "Enviado" || lastStatus == "WiFi OK") {
+    rgbGreen();
+  } else {
+    rgbRed();
+  }
 
   unsigned long startWait = millis();
 
